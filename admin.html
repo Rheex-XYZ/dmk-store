@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel - DMK Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="bg-gray-950 text-white min-h-screen">
+    <!-- LOGIN MODAL -->
+    <div
+      id="loginModal"
+      class="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+    >
+      <div
+        class="bg-gray-900 p-8 rounded-xl border border-gray-800 w-full max-w-md shadow-2xl"
+      >
+        <h2 class="text-2xl font-bold mb-6 text-center text-yellow-500">
+          Login Admin
+        </h2>
+        <form onsubmit="handleLogin(event)">
+          <div class="mb-4">
+            <label class="block text-sm text-gray-400 mb-2">Username</label>
+            <input
+              type="text"
+              id="username"
+              class="w-full bg-gray-800 p-3 rounded border border-gray-700 focus:border-yellow-500 outline-none"
+              required
+            />
+          </div>
+          <div class="mb-6">
+            <label class="block text-sm text-gray-400 mb-2">Password</label>
+            <input
+              type="password"
+              id="password"
+              class="w-full bg-gray-800 p-3 rounded border border-gray-700 focus:border-yellow-500 outline-none"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 rounded transition"
+          >
+            Masuk
+          </button>
+          <p
+            id="loginError"
+            class="text-red-500 text-sm mt-4 text-center hidden"
+          >
+            Username atau Password salah!
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ADMIN DASHBOARD (Hidden by default) -->
+    <div id="dashboard" class="hidden">
+      <!-- Navbar Admin -->
+      <nav
+        class="bg-gray-900 border-b border-gray-800 p-4 flex justify-between items-center sticky top-0 z-40"
+      >
+        <h1 class="text-xl font-bold text-yellow-500">Admin DMK Store</h1>
+        <div class="flex gap-4 items-center">
+          <a
+            href="/"
+            target="_blank"
+            class="text-sm bg-gray-800 px-4 py-2 rounded hover:bg-gray-700"
+            >Lihat Website</a
+          >
+          <button
+            onclick="logout()"
+            class="text-sm bg-red-600 px-4 py-2 rounded hover:bg-red-700"
+          >
+            Logout
+          </button>
+        </div>
+      </nav>
+
+      <!-- Tab Navigation -->
+      <div class="container mx-auto px-6 pt-6">
+        <div class="flex gap-2 border-b border-gray-800 pb-2">
+          <button
+            onclick="switchTab('products')"
+            id="tab-products"
+            class="tab-btn active px-4 py-2 rounded-t-lg font-semibold"
+          >
+            Produk Utama
+          </button>
+          <button
+            onclick="switchTab('flashsale')"
+            id="tab-flashsale"
+            class="tab-btn px-4 py-2 rounded-t-lg font-semibold"
+          >
+            Flash Sale
+          </button>
+          <button
+            onclick="switchTab('newrelease')"
+            id="tab-newrelease"
+            class="tab-btn px-4 py-2 rounded-t-lg font-semibold"
+          >
+            New Release
+          </button>
+        </div>
+      </div>
+
+      <div class="container mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Form Tambah/Edit Produk -->
+        <div
+          class="lg:col-span-1 bg-gray-900 p-6 rounded-xl border border-gray-800 h-fit sticky top-20"
+        >
+          <h2 class="text-lg font-bold mb-4" id="formTitle">
+            Tambah Produk Baru
+          </h2>
+          <form
+            id="productForm"
+            onsubmit="saveProduct(event)"
+            class="space-y-4"
+          >
+            <input type="hidden" id="productId" />
+
+            <div>
+              <label class="text-sm text-gray-400">Nama Produk</label>
+              <input
+                type="text"
+                id="name"
+                required
+                class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 focus:border-yellow-500 outline-none"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-sm text-gray-400">Harga Jual (Rp)</label>
+                <input
+                  type="number"
+                  id="price"
+                  required
+                  class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
+                />
+              </div>
+
+              <!-- Khusus Flash Sale: Harga Asli -->
+              <div id="field-originalPrice" class="hidden">
+                <label class="text-sm text-gray-400">Harga Asli (Rp)</label>
+                <input
+                  type="number"
+                  id="originalPrice"
+                  class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
+                />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-400">Stok</label>
+                <input
+                  type="number"
+                  id="stock"
+                  required
+                  class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-sm text-gray-400">Kategori</label>
+                <select
+                  id="category"
+                  class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
+                >
+                  <option value="kaos">Kaos</option>
+                  <option value="hoodie">Hoodie</option>
+                  <option value="celana">Celana</option>
+                  <option value="jeans">Jeans</option>
+                  <option value="kemeja">Kemeja</option>
+                  <option value="jaket">Jaket</option>
+                  <option value="rok">Rok</option>
+                  <option value="dress">Dress</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-400">Ukuran</label>
+                <input
+                  type="text"
+                  id="size"
+                  placeholder="S - XL"
+                  class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="text-sm text-gray-400">Link Gambar (URL)</label>
+              <input
+                type="url"
+                id="image"
+                placeholder="https://..."
+                class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
+              />
+            </div>
+
+            <div>
+              <label class="text-sm text-gray-400">Deskripsi</label>
+              <textarea
+                id="description"
+                rows="3"
+                class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
+              ></textarea>
+            </div>
+
+            <div class="flex gap-2">
+              <button
+                type="submit"
+                class="flex-1 bg-yellow-600 hover:bg-yellow-700 py-2 rounded font-bold transition"
+              >
+                Simpan
+              </button>
+              <button
+                type="button"
+                onclick="resetForm()"
+                class="bg-gray-700 hover:bg-gray-600 py-2 px-4 rounded transition"
+              >
+                Reset
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Daftar Produk -->
+        <div class="lg:col-span-2">
+          <h2 class="text-lg font-bold mb-4" id="listTitle">Daftar Produk</h2>
+          <div id="productList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Produk akan di-render di sini -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="admin.js"></script>
+    <style>
+      .tab-btn {
+        background: transparent;
+        color: #b0b0b0;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+      .tab-btn.active {
+        background: #1a1a1a;
+        color: #d4af37;
+        border-top: 2px solid #d4af37;
+      }
+    </style>
+  </body>
+</html>

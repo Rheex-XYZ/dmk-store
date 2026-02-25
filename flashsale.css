@@ -1,0 +1,574 @@
+/* ==================== FLASH SALE PAGE STYLES ==================== */
+
+:root {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #141414;
+  --bg-card: #1a1a1a;
+  --gold-primary: #d4af37;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  --border-color: #2a2a2a;
+  --flash-color: #ef4444;
+  --flash-glow: rgba(239, 68, 68, 0.4);
+  --flash-secondary: #f97316;
+}
+
+/* Page Content */
+.page-content {
+  padding-top: 100px;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Flash Hero */
+.flash-hero {
+  text-align: center;
+  padding: 3rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.flash-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.flash-hero-bg::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(
+    circle,
+    rgba(239, 68, 68, 0.15) 0%,
+    transparent 70%
+  );
+  animation: pulse-bg 3s ease-in-out infinite;
+}
+@keyframes pulse-bg {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.flash-hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.flash-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.3),
+    rgba(249, 115, 22, 0.1)
+  );
+  border: 2px solid var(--flash-color);
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--flash-color);
+  margin-bottom: 1.5rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+@keyframes badge-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--flash-glow);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px var(--flash-glow);
+  }
+}
+.flash-badge svg {
+  stroke: var(--flash-color);
+}
+
+.flash-title {
+  font-family: "Playfair Display", serif;
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: linear-gradient(
+    135deg,
+    var(--flash-color),
+    var(--flash-secondary)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.flash-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 2rem;
+}
+
+/* Countdown Timer */
+.countdown-container {
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.1),
+    rgba(239, 68, 68, 0.02)
+  );
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 20px;
+  padding: 2rem;
+  display: inline-block;
+}
+.countdown-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.countdown-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.countdown-box {
+  background: var(--bg-card);
+  border: 1px solid var(--flash-color);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  min-width: 70px;
+  box-shadow: 0 4px 20px var(--flash-glow);
+}
+.countdown-value {
+  display: block;
+  font-family: "Playfair Display", serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--flash-color);
+  line-height: 1;
+}
+.countdown-unit {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+  letter-spacing: 1px;
+}
+.countdown-separator {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--flash-color);
+  animation: blink 1s ease-in-out infinite;
+}
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Sale Ended */
+.sale-ended {
+  text-align: center;
+  padding: 2rem;
+}
+.sale-ended svg {
+  stroke: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+.sale-ended h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.sale-ended p {
+  color: var(--text-secondary);
+}
+
+/* Back Button */
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 50px;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+.back-btn:hover {
+  border-color: var(--flash-color);
+  color: var(--flash-color);
+}
+
+/* Section Header */
+.section-header-flash {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 0 1rem;
+}
+.section-header-flash h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+.section-header-flash p {
+  color: var(--text-secondary);
+}
+
+/* Flash Products Section - PERBAIKAN: Tambahan display: block */
+.flash-products-section {
+  display: block;
+  padding: 0 1rem 4rem;
+}
+
+.flash-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Flash Sale Card */
+.flash-card {
+  background: var(--bg-card);
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  transition: all 0.4s ease;
+  position: relative;
+}
+.flash-card:hover {
+  transform: translateY(-10px);
+  border-color: var(--flash-color);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    0 0 40px var(--flash-glow);
+}
+.flash-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--flash-color),
+    var(--flash-secondary),
+    var(--flash-color)
+  );
+  animation: gradient-shift 3s linear infinite;
+}
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* Flash Tag */
+.flash-tag {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  background: linear-gradient(
+    135deg,
+    var(--flash-color),
+    var(--flash-secondary)
+  );
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 50px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  z-index: 5;
+  box-shadow: 0 4px 15px var(--flash-glow);
+  animation: flash-pulse 1.5s ease-in-out infinite;
+}
+@keyframes flash-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+.flash-tag svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Discount Badge */
+.discount-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  padding: 0.3rem 0.8rem;
+  background: #22c55e;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 8px;
+  z-index: 5;
+}
+
+/* Image Container */
+.flash-image-container {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+.flash-image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+.flash-card:hover .flash-image-container img {
+  transform: scale(1.05);
+}
+
+/* Card Info */
+.flash-card-info {
+  padding: 1.5rem;
+}
+.flash-card-name {
+  font-family: "Playfair Display", serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+.flash-card-meta {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Price Section */
+.flash-price-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.flash-price-original {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+.flash-price-sale {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--flash-color);
+}
+
+.flash-stock {
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+.flash-stock.available {
+  color: #22c55e;
+}
+.flash-stock.out-of-stock {
+  color: #ef4444;
+}
+
+/* Stock Progress Bar */
+.stock-progress {
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.stock-progress-bar {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--flash-color),
+    var(--flash-secondary)
+  );
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Card Actions */
+.flash-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.flash-btn-cart {
+  flex: 1;
+  padding: 0.8rem;
+  background: transparent;
+  border: 2px solid var(--flash-color);
+  color: var(--flash-color);
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.flash-btn-cart:hover {
+  background: var(--flash-color);
+  color: white;
+}
+.flash-btn-buy {
+  padding: 0.8rem 1.2rem;
+  background: linear-gradient(
+    135deg,
+    var(--flash-color),
+    var(--flash-secondary)
+  );
+  border: none;
+  color: white;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flash-btn-buy:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 20px var(--flash-glow);
+}
+.flash-btn-buy:disabled,
+.flash-btn-cart:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Empty State */
+.flash-empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-secondary);
+}
+.flash-empty-state svg {
+  stroke: var(--border-color);
+  margin-bottom: 1.5rem;
+}
+.flash-empty-state h3 {
+  font-family: "Playfair Display", serif;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.flash-empty-state p {
+  margin-bottom: 1.5rem;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .flash-hero {
+    padding: 2rem 1rem;
+  }
+  .flash-title {
+    font-size: 2rem;
+  }
+  .countdown-container {
+    padding: 1.5rem 1rem;
+  }
+  .countdown-box {
+    padding: 0.8rem;
+    min-width: 55px;
+  }
+  .countdown-value {
+    font-size: 1.5rem;
+  }
+  .countdown-separator {
+    font-size: 1.5rem;
+  }
+  .flash-products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+  .flash-image-container {
+    height: 230px;
+  }
+  .flash-card-actions {
+    flex-direction: column;
+  }
+  .flash-btn-buy {
+    width: 100%;
+    justify-content: center;
+  }
+}
+@media (max-width: 480px) {
+  .flash-products-grid {
+    grid-template-columns: 1fr;
+  }
+  .countdown-timer {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .countdown-box {
+    min-width: 45px;
+    padding: 0.6rem 0.5rem;
+  }
+  .countdown-value {
+    font-size: 1.2rem;
+  }
+  .countdown-separator {
+    display: none;
+  }
+  .back-btn span {
+    display: none;
+  }
+  .back-btn {
+    padding: 0.6rem;
+    border-radius: 50%;
+  }
+}
