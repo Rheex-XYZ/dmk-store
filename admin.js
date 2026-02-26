@@ -1,5 +1,5 @@
 // ================== ADMIN LOGIC ==================
-let currentType = "products";
+let currentType = "products"; // Default: products, flashsale, newrelease
 
 document.addEventListener("DOMContentLoaded", () => {
   const isLoggedIn = localStorage.getItem("dmk_admin_logged_in");
@@ -19,7 +19,6 @@ function showDashboard() {
   document.getElementById("loginModal").classList.add("hidden");
   document.getElementById("dashboard").classList.remove("hidden");
   loadProducts();
-  loadCategories(); // LOAD KATEGORI SAAT DASHBOARD MUNCUL
 }
 
 // Handle Login
@@ -54,28 +53,32 @@ function logout() {
   location.reload();
 }
 
-// ================== SWITCH TAB ==================
+// ================== SWITCH TAB (MODIFIED) ==================
 function switchTab(type) {
   currentType = type;
+
+  // Update UI Tabs
   document
     .querySelectorAll(".tab-btn")
     .forEach((btn) => btn.classList.remove("active"));
   document.getElementById(`tab-${type}`).classList.add("active");
 
+  // Show/Hide Timer Settings & Original Price Field
   const timerSettings = document.getElementById("flashSaleTimerSettings");
   const originalPriceField = document.getElementById("field-originalPrice");
 
   if (type === "flashsale") {
-    timerSettings.classList.remove("hidden");
+    timerSettings.classList.remove("hidden"); // TAMPILKAN TIMER SETTINGS
     originalPriceField.classList.remove("hidden");
     document.getElementById("originalPrice").required = true;
-    loadFlashSaleSettings();
+    loadFlashSaleSettings(); // Load waktu saat tab flash sale dibuka
   } else {
-    timerSettings.classList.add("hidden");
+    timerSettings.classList.add("hidden"); // SEMBUNYIKAN TIMER SETTINGS
     originalPriceField.classList.add("hidden");
     document.getElementById("originalPrice").required = false;
   }
 
+  // Update Titles
   const titles = {
     products: { form: "Tambah Produk Utama", list: "Daftar Produk Utama" },
     flashsale: { form: "Tambah Flash Sale", list: "Daftar Flash Sale" },
@@ -88,35 +91,25 @@ function switchTab(type) {
   loadProducts();
 }
 
-// ================== LOAD KATEGORI (BARU) ==================
-async function loadCategories() {
-  try {
-    const res = await fetch("/api/categories");
-    const categories = await res.json();
-    const datalist = document.getElementById("categoryList");
-    datalist.innerHTML = categories
-      .map((cat) => `<option value="${cat}">`)
-      .join("");
-  } catch (err) {
-    console.error("Gagal memuat kategori", err);
-  }
-}
-
-// ================== FLASH SALE SETTINGS ==================
+// ================== FLASH SALE SETTINGS LOGIC ==================
 async function loadFlashSaleSettings() {
   try {
     const res = await fetch("/api/flashsale/settings");
     const settings = await res.json();
+
     const inputEl = document.getElementById("flashSaleEndTime");
     const infoEl = document.getElementById("currentEndTime");
 
     if (settings.endDate) {
       const dateObj = new Date(settings.endDate);
+      // Format to datetime-local input (YYYY-MM-DDTHH:MM)
+      // We adjust for timezone offset so the input shows local time correctly
       const localDate = new Date(
         dateObj.getTime() - dateObj.getTimezoneOffset() * 60000,
       )
         .toISOString()
         .slice(0, 16);
+
       inputEl.value = localDate;
       infoEl.textContent = `Jadwal saat ini: ${dateObj.toLocaleString("id-ID")}`;
     } else {
@@ -131,10 +124,13 @@ async function loadFlashSaleSettings() {
 async function saveFlashSaleSettings() {
   const inputVal = document.getElementById("flashSaleEndTime").value;
   if (!inputVal) {
-    alert("Pilih tanggal dan waktu!");
+    alert("Pilih tanggal dan waktu terlebih dahulu!");
     return;
   }
+
+  // Convert input to ISO string
   const isoDate = new Date(inputVal).toISOString();
+
   try {
     const res = await fetch("/api/flashsale/settings", {
       method: "POST",
@@ -144,7 +140,7 @@ async function saveFlashSaleSettings() {
     const data = await res.json();
     if (data.success) {
       alert("Jadwal flash sale berhasil disimpan!");
-      loadFlashSaleSettings();
+      loadFlashSaleSettings(); // Refresh info text
     } else {
       alert("Gagal menyimpan jadwal.");
     }
@@ -157,14 +153,17 @@ async function saveFlashSaleSettings() {
 async function loadProducts() {
   const listEl = document.getElementById("productList");
   listEl.innerHTML = '<p class="text-gray-500">Memuat produk...</p>';
+
   try {
     const res = await fetch(`/api/${currentType}`);
     const products = await res.json();
+
     if (products.length === 0) {
       listEl.innerHTML =
         '<p class="text-gray-500 col-span-2">Belum ada produk.</p>';
       return;
     }
+
     listEl.innerHTML = products
       .map(
         (p) => `
@@ -194,16 +193,13 @@ async function loadProducts() {
 
 async function saveProduct(e) {
   e.preventDefault();
+
   const id = document.getElementById("productId").value;
-
-  // PERBAIKAN: Ambil nilai kategori dan ubah ke lowercase (standarisasi)
-  const categoryInput = document.getElementById("category").value.toLowerCase();
-
   const productData = {
     name: document.getElementById("name").value,
     price: parseInt(document.getElementById("price").value),
     stock: parseInt(document.getElementById("stock").value),
-    category: categoryInput, // KIRIM KATEGORI
+    category: document.getElementById("category").value,
     size: document.getElementById("size").value,
     image: document.getElementById("image").value,
     description: document.getElementById("description").value,
@@ -230,7 +226,6 @@ async function saveProduct(e) {
       alert(id ? "Produk berhasil diupdate!" : "Produk berhasil ditambahkan!");
       resetForm();
       loadProducts();
-      loadCategories(); // REFRESH LIST KATEGORI JIKA ADA BARU
     } else {
       alert("ERROR: " + (data.message || "Gagal menyimpan produk"));
     }
@@ -250,7 +245,7 @@ async function editProduct(id) {
       document.getElementById("name").value = product.name;
       document.getElementById("price").value = product.price;
       document.getElementById("stock").value = product.stock;
-      document.getElementById("category").value = product.category || "";
+      document.getElementById("category").value = product.category;
       document.getElementById("size").value = product.size || "";
       document.getElementById("image").value = product.images
         ? product.images[0]
@@ -259,15 +254,6 @@ async function editProduct(id) {
 
       if (currentType === "flashsale" && product.originalPrice) {
         document.getElementById("originalPrice").value = product.originalPrice;
-      }
-
-      const previewEl = document.getElementById("imagePreview");
-      const previewImg = document.getElementById("previewImg");
-      if (product.images && product.images[0]) {
-        previewImg.src = product.images[0];
-        previewEl.classList.remove("hidden");
-      } else {
-        previewEl.classList.add("hidden");
       }
 
       document.getElementById("formTitle").textContent =
@@ -286,7 +272,9 @@ async function deleteProduct(id) {
         method: "DELETE",
       });
       const data = await res.json();
-      if (data.success) loadProducts();
+      if (data.success) {
+        loadProducts();
+      }
     } catch (err) {
       alert("Gagal menghapus");
     }
@@ -296,7 +284,6 @@ async function deleteProduct(id) {
 function resetForm() {
   document.getElementById("productForm").reset();
   document.getElementById("productId").value = "";
-  document.getElementById("imagePreview").classList.add("hidden");
   const titles = {
     products: "Tambah Produk Utama",
     flashsale: "Tambah Flash Sale",
@@ -307,82 +294,4 @@ function resetForm() {
 
 function formatPrice(price) {
   return "Rp " + price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
-
-// ================== FITUR UPLOAD GAMBAR ==================
-async function handleImageUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const statusEl = document.getElementById("uploadStatus");
-  const previewEl = document.getElementById("imagePreview");
-  const previewImg = document.getElementById("previewImg");
-  const inputUrl = document.getElementById("image");
-
-  statusEl.textContent = "Memproses gambar...";
-  statusEl.className = "text-xs text-yellow-500 mt-1";
-
-  if (!file.type.startsWith("image/")) {
-    statusEl.textContent = "Hanya file gambar yang diizinkan!";
-    statusEl.className = "text-xs text-red-500 mt-1";
-    return;
-  }
-
-  try {
-    const compressedBase64 = await compressImage(file, 800, 0.8);
-    statusEl.textContent = "Mengupload...";
-
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: compressedBase64 }),
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      inputUrl.value = data.url;
-      statusEl.textContent = "Upload berhasil!";
-      statusEl.className = "text-xs text-green-500 mt-1";
-      previewImg.src = data.url;
-      previewEl.classList.remove("hidden");
-    } else {
-      throw new Error(data.message || "Gagal upload ke server");
-    }
-  } catch (err) {
-    statusEl.textContent = "Error: " + err.message;
-    statusEl.className = "text-xs text-red-500 mt-1";
-  }
-}
-
-function compressImage(file, maxWidth, quality) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = function (event) {
-      const img = new Image();
-      img.src = event.target.result;
-      img.onload = function () {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", quality);
-        resolve(dataUrl);
-      };
-      img.onerror = function (err) {
-        reject(err);
-      };
-    };
-    reader.onerror = function (err) {
-      reject(err);
-    };
-  });
 }

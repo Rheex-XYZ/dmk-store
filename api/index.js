@@ -3,12 +3,10 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import { Redis } from "@upstash/redis";
-import FormData from "form-data";
-import fetch from "node-fetch";
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.json());
 
 // ==================== SETUP REDIS OTOMATIS ====================
 function getRedisConfig() {
@@ -29,8 +27,9 @@ function getRedisConfig() {
 }
 
 const redis = new Redis(getRedisConfig());
+// ===============================================================
 
-// Helper: Baca Data
+// Helper: Baca Data (sekarang menerima key dinamis)
 const readData = async (key) => {
   try {
     const data = await redis.get(key);
@@ -41,7 +40,7 @@ const readData = async (key) => {
   }
 };
 
-// Helper: Tulis Data
+// Helper: Tulis Data (sekarang menerima key dinamis)
 const writeData = async (key, data) => {
   try {
     await redis.set(key, data);
@@ -64,88 +63,11 @@ app.post("/api/login", (req, res) => {
     .json({ success: false, message: "Username atau password salah" });
 });
 
-// ==================== FITUR UPLOAD GAMBAR ====================
-app.post("/api/upload", async (req, res) => {
-  try {
-    const { image } = req.body;
-    if (!image)
-      return res
-        .status(400)
-        .json({ success: false, message: "Gambar tidak ditemukan" });
-
-    const apiKey = process.env.IMGBB_API_KEY;
-    if (!apiKey)
-      return res.status(500).json({
-        success: false,
-        message: "Server Error: IMGBB_API_KEY belum diset.",
-      });
-
-    const form = new FormData();
-    const base64Data = image.split(";base64,").pop();
-    form.append("image", base64Data);
-
-    const response = await fetch(
-      `https://api.imgbb.com/1/upload?key=${apiKey}`,
-      {
-        method: "POST",
-        body: form,
-        headers: form.getHeaders(),
-      },
-    );
-
-    const result = await response.json();
-    if (result.success) {
-      const directUrl = result.data.image.url; // Ambil direct URL
-      res.json({ success: true, url: directUrl });
-    } else {
-      throw new Error(result.error.message || "Gagal upload ke ImgBB");
-    }
-  } catch (err) {
-    console.error("Upload Error:", err);
-    res
-      .status(500)
-      .json({ success: false, message: "Upload gagal: " + err.message });
-  }
-});
-
-// ==================== DYNAMIC CATEGORIES ====================
-const updateCategoryList = async (categoryName) => {
-  if (!categoryName) return;
-  let categories = await readData("categories");
-  if (!categories) categories = [];
-  const lowerCat = categoryName.toLowerCase();
-  if (!categories.includes(lowerCat)) {
-    categories.push(lowerCat);
-    await writeData("categories", categories);
-  }
-};
-
-app.get("/api/categories", async (req, res) => {
-  try {
-    let categories = await readData("categories");
-    if (!categories || categories.length === 0) {
-      categories = [
-        "kaos",
-        "hoodie",
-        "celana",
-        "jeans",
-        "kemeja",
-        "jaket",
-        "rok",
-        "dress",
-      ];
-      await writeData("categories", categories);
-    }
-    res.json(categories);
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Gagal ambil kategori" });
-  }
-});
-
-// 2. Get Semua Produk
+// 2. Get Semua Produk (Dinamis: products, flashsale, newrelease)
 app.get("/api/:type", async (req, res) => {
   try {
     const type = req.params.type;
+    // Keamanan: Hanya izinkan tipe tertentu
     if (!["products", "flashsale", "newrelease"].includes(type)) {
       return res
         .status(400)
@@ -160,26 +82,36 @@ app.get("/api/:type", async (req, res) => {
   }
 });
 
-// 3. Tambah Produk
+// 3. Tambah Produk Baru (Dinamis)
 app.post("/api/:type", async (req, res) => {
   try {
     const type = req.params.type;
-    if (!["products", "flashsale", "newrelease"].includes(type))
-      return res.status(400).json({ success: false });
+    if (!["products", "flashsale", "newrelease"].includes(type)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Tipe produk tidak valid" });
+    }
 
     const products = await readData(type);
+
+    // Handle image input (bisa single string atau array)
     let images = [];
-    if (req.body.images) images = req.body.images;
-    else if (req.body.image) images = [req.body.image];
-    else images = ["https://via.placeholder.com/400"];
+    if (req.body.images) {
+      images = req.body.images;
+    } else if (req.body.image) {
+      images = [req.body.image];
+    } else {
+      images = ["https://via.placeholder.com/400"];
+    }
 
     const newProduct = {
-      id: Date.now(),
+      id: Date.now(), // ID unik
       ...req.body,
       images: images,
       stock: req.body.stock || 0,
     };
 
+    // Khusus Flash Sale, hitung diskon jika tidak ada
     if (type === "flashsale" && req.body.originalPrice && req.body.price) {
       newProduct.discount = Math.round(
         ((req.body.originalPrice - req.body.price) / req.body.originalPrice) *
@@ -189,9 +121,6 @@ app.post("/api/:type", async (req, res) => {
 
     products.push(newProduct);
     await writeData(type, products);
-
-    if (req.body.category) await updateCategoryList(req.body.category);
-
     res.json({ success: true, product: newProduct });
   } catch (err) {
     res
@@ -200,7 +129,7 @@ app.post("/api/:type", async (req, res) => {
   }
 });
 
-// 4. Edit Produk
+// 4. Edit Produk (Dinamis)
 app.put("/api/:type/:id", async (req, res) => {
   try {
     const type = req.params.type;
@@ -210,13 +139,19 @@ app.put("/api/:type/:id", async (req, res) => {
     let products = await readData(type);
     const id = parseInt(req.params.id);
     const index = products.findIndex((p) => p.id === id);
+
     if (index === -1)
       return res
         .status(404)
         .json({ success: false, message: "Produk tidak ditemukan" });
 
+    // Update data
     products[index] = { ...products[index], ...req.body };
+
+    // Update image array jika ada input image baru
     if (req.body.image) products[index].images = [req.body.image];
+
+    // Update diskon flash sale
     if (type === "flashsale" && req.body.originalPrice && req.body.price) {
       products[index].discount = Math.round(
         ((req.body.originalPrice - req.body.price) / req.body.originalPrice) *
@@ -225,8 +160,6 @@ app.put("/api/:type/:id", async (req, res) => {
     }
 
     await writeData(type, products);
-    if (req.body.category) await updateCategoryList(req.body.category);
-
     res.json({ success: true, product: products[index] });
   } catch (err) {
     res
@@ -235,7 +168,7 @@ app.put("/api/:type/:id", async (req, res) => {
   }
 });
 
-// 5. Hapus Produk
+// 5. Hapus Produk (Dinamis)
 app.delete("/api/:type/:id", async (req, res) => {
   try {
     const type = req.params.type;
@@ -253,49 +186,42 @@ app.delete("/api/:type/:id", async (req, res) => {
   }
 });
 
-// 6. Checkout (PERBAIKAN ERROR)
+// 6. Checkout (Update Stok Dinamis)
 app.post("/api/checkout", async (req, res) => {
   try {
-    const { items } = req.body;
+    const { items } = req.body; // items harus berisi { id, quantity, type? } atau kita cek satu-satu
 
-    // Validasi Input
-    if (!items || !Array.isArray(items)) {
-      return res.status(400).json({
-        success: false,
-        message: "Data items tidak valid atau kosong.",
-      });
-    }
+    // Kita asumsikan checkout bisa dari produk biasa, flash sale, dll.
+    // Strategi sederhana: cek di semua koleksi atau dari tipe yang dikirim.
+    // Untuk simplifikasi, kita akan update berdasarkan ID di semua koleksi jika ditemukan.
+
+    let updated = false;
 
     for (const item of items) {
-      if (!item.id) continue; // Skip jika tidak ada ID
-
       const types = ["products", "flashsale", "newrelease"];
       for (const type of types) {
         let data = await readData(type);
-        if (!Array.isArray(data)) continue; // Safety check
-
         const idx = data.findIndex((p) => p.id === item.id);
         if (idx !== -1) {
-          // Kurangi stok
-          const currentStock = data[idx].stock || 0;
-          const qty = item.quantity || 1;
-          data[idx].stock = Math.max(0, currentStock - qty);
-
+          data[idx].stock = Math.max(0, (data[idx].stock || 0) - item.quantity);
           await writeData(type, data);
-          break; // Hentikan loop type jika produk sudah ditemukan
+          updated = true;
+          break; // Jika ketemu, lanjut item berikutnya
         }
       }
     }
+
     res.json({ success: true, message: "Checkout sukses" });
   } catch (err) {
-    console.error("Checkout Error Detail:", err); // Log detail di server
     res
       .status(500)
-      .json({ success: false, message: "Error Server: " + err.message });
+      .json({ success: false, message: "Gagal checkout: " + err.message });
   }
 });
 
 // ==================== FLASH SALE SETTINGS ====================
+
+// Get Pengaturan Waktu
 app.get("/api/flashsale/settings", async (req, res) => {
   try {
     const settings = await readData("flashsale_settings");
@@ -305,9 +231,11 @@ app.get("/api/flashsale/settings", async (req, res) => {
   }
 });
 
+// Simpan Pengaturan Waktu
 app.post("/api/flashsale/settings", async (req, res) => {
   try {
     const { endDate } = req.body;
+    // Simpan objek { endDate: "ISO_STRING" }
     await writeData("flashsale_settings", { endDate });
     res.json({ success: true, message: "Waktu flash sale diperbarui" });
   } catch (err) {
@@ -316,5 +244,7 @@ app.post("/api/flashsale/settings", async (req, res) => {
       .json({ success: false, message: "Gagal simpan pengaturan" });
   }
 });
+
+// ===============================================================
 
 export default app;
