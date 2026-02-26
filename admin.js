@@ -192,15 +192,10 @@ async function populateCategoryOptions(currentProducts) {
 
   try {
     // Ambil semua produk dari semua tipe untuk mendapatkan daftar kategori lengkap
-    // Kecuali currentProducts sudah cukup, tapi lebih baik ambil semua biar konsisten
     const types = ["products", "flashsale", "newrelease"];
     let allProducts = [];
 
-    // Jika ingin efisiensi, kita bisa cuma pakai currentProducts,
-    // tapi di sini kita fetch semua agar dropdown kategori selalu lengkap di semua tab
-    // (opsional: bisa disederhanakan hanya pakai currentProducts jika performa issue)
-
-    // Untuk simpelnya, kita fetch semua
+    // Fetch semua tipe
     const promises = types.map((type) =>
       fetch(`/api/${type}`).then((r) => r.json()),
     );
@@ -227,11 +222,19 @@ async function saveProduct(e) {
   e.preventDefault();
 
   const id = document.getElementById("productId").value;
+  const categoryInput = document.getElementById("category").value;
+
+  // Cek jika kategori kosong
+  if (!categoryInput) {
+    alert("Kategori tidak boleh kosong!");
+    return;
+  }
+
   const productData = {
     name: document.getElementById("name").value,
     price: parseInt(document.getElementById("price").value),
     stock: parseInt(document.getElementById("stock").value),
-    category: document.getElementById("category").value, // Ambil nilai dari input teks
+    category: categoryInput, // Ambil nilai dari input teks
     size: document.getElementById("size").value,
     image: document.getElementById("image").value,
     description: document.getElementById("description").value,
@@ -336,7 +339,7 @@ function formatPrice(price) {
   return "Rp " + price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-// ================== FITUR UPLOAD GAMBAR (DENGAN KOMPRESI) ==================
+// ================== FITUR UPLOAD GAMBAR ==================
 async function handleImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;

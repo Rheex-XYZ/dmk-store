@@ -1,5 +1,6 @@
 let newReleaseProducts = [];
 let cart = [];
+let currentCategory = "all"; // State untuk kategori aktif
 
 // Variabel untuk checkout
 let currentCheckoutItems = [];
@@ -15,6 +16,7 @@ async function fetchNewReleaseProducts() {
     const res = await fetch("/api/newrelease");
     if (res.ok) {
       newReleaseProducts = await res.json();
+      renderCategoryTabs(); // Render tab kategori otomatis
       renderNewReleaseProducts("all");
     } else {
       console.error("Gagal memuat new release");
@@ -22,6 +24,28 @@ async function fetchNewReleaseProducts() {
   } catch (err) {
     console.error("Error:", err);
   }
+}
+
+// ==================== RENDER KATEGORI DINAMIS (BARU) ====================
+function renderCategoryTabs() {
+  const container = document.querySelector(".category-tabs");
+  if (!container) return;
+
+  // Ekstrak kategori unik
+  const categories = [
+    ...new Set(newReleaseProducts.map((p) => p.category).filter((c) => c)),
+  ];
+
+  // Buat HTML untuk tombol "Semua"
+  let html = `<button class="category-tab ${currentCategory === "all" ? "active" : ""}" onclick="filterNewRelease('all')">Semua</button>`;
+
+  // Loop kategori dan buat tombol
+  categories.forEach((cat) => {
+    const displayName = cat.charAt(0).toUpperCase() + cat.slice(1);
+    html += `<button class="category-tab ${currentCategory === cat ? "active" : ""}" onclick="filterNewRelease('${cat}')">${displayName}</button>`;
+  });
+
+  container.innerHTML = html;
 }
 
 // ==================== FUNGSI KERANJANG ====================
@@ -261,7 +285,6 @@ function buyNow(productId) {
   const product = newReleaseProducts.find((p) => p.id === productId);
   if (!product || product.stock <= 0) return;
 
-  // Buat item sementara TANPA menambah ke cart
   const itemToBuy = {
     id: product.id,
     name: product.name,
@@ -289,16 +312,18 @@ function toggleMenu() {
 function renderNewReleaseProducts(category) {
   const grid = document.getElementById("newReleaseGrid");
   const emptyState = document.getElementById("emptyState");
-  const tabs = document.querySelectorAll(".category-tab");
 
-  tabs.forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.category === category);
-  });
+  // Update state global
+  currentCategory = category;
+
+  // Update active state pada tab (menjalankan ulang render tabs)
+  renderCategoryTabs();
 
   let filteredProducts =
     category === "all"
       ? newReleaseProducts
       : newReleaseProducts.filter((p) => p.category === category);
+
   grid.innerHTML = "";
 
   if (filteredProducts.length === 0) {
