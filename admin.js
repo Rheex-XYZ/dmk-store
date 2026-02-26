@@ -295,3 +295,64 @@ function resetForm() {
 function formatPrice(price) {
   return "Rp " + price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
+
+// ================== FITUR UPLOAD GAMBAR (BARU) ==================
+async function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById("uploadStatus");
+  const previewEl = document.getElementById("imagePreview");
+  const previewImg = document.getElementById("previewImg");
+  const inputUrl = document.getElementById("image");
+
+  statusEl.textContent = "Mengupload gambar...";
+  statusEl.className = "text-xs text-yellow-500 mt-1";
+
+  // Validasi ukuran (maks 5MB untuk aman)
+  if (file.size > 5 * 1024 * 1024) {
+    statusEl.textContent = "File terlalu besar (Maks 5MB)";
+    statusEl.className = "text-xs text-red-500 mt-1";
+    return;
+  }
+
+  // Baca file sebagai Base64
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+
+  reader.onload = async function () {
+    try {
+      // Kirim base64 ke backend kita
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: reader.result }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Sukses! Isi input URL dengan link dari ImgBB
+        inputUrl.value = data.url;
+        statusEl.textContent = "Upload berhasil!";
+        statusEl.className = "text-xs text-green-500 mt-1";
+
+        // Tampilkan preview
+        previewImg.src = data.url;
+        previewEl.classList.remove("hidden");
+      } else {
+        throw new Error(data.message || "Gagal upload ke server");
+      }
+    } catch (err) {
+      statusEl.textContent = "Error: " + err.message;
+      statusEl.className = "text-xs text-red-500 mt-1";
+    }
+  };
+
+  reader.onerror = function () {
+    statusEl.textContent = "Gagal membaca file";
+    statusEl.className = "text-xs text-red-500 mt-1";
+  };
+}
+
+// ... kode admin.js lainnya tetap sama ...

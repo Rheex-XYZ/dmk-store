@@ -229,15 +229,57 @@
               </div>
             </div>
 
+            <!-- BAGIAN GAMBAR DENGAN FITUR UPLOAD -->
             <div>
-              <label class="text-sm text-gray-400">Link Gambar (URL)</label>
-              <input
-                type="url"
-                id="image"
-                placeholder="https://..."
-                class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
-              />
+              <label class="text-sm text-gray-400">Gambar Produk</label>
+              <div class="flex gap-2 items-center mt-1">
+                <!-- Input URL (Akan terisi otomatis saat upload berhasil) -->
+                <input
+                  type="url"
+                  id="image"
+                  placeholder="Link gambar otomatis muncul di sini"
+                  class="flex-1 bg-gray-800 p-2 rounded border border-gray-700 outline-none text-sm"
+                />
+
+                <!-- Tombol Upload -->
+                <label
+                  class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded cursor-pointer text-sm font-semibold flex items-center gap-2 transition whitespace-nowrap"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  Upload
+                  <input
+                    type="file"
+                    id="imageFile"
+                    accept="image/*"
+                    class="hidden"
+                    onchange="handleImageUpload(event)"
+                  />
+                </label>
+              </div>
+              <!-- Status Upload -->
+              <p id="uploadStatus" class="text-xs text-gray-500 mt-1 h-4"></p>
+              <!-- Preview Gambar -->
+              <div id="imagePreview" class="mt-2 hidden">
+                <img
+                  src=""
+                  id="previewImg"
+                  class="w-24 h-24 object-cover rounded border border-gray-700"
+                  alt="Preview"
+                />
+              </div>
             </div>
+            <!-- AKHIR BAGIAN GAMBAR -->
 
             <div>
               <label class="text-sm text-gray-400">Deskripsi</label>
