@@ -53,32 +53,29 @@ function logout() {
   location.reload();
 }
 
-// ================== SWITCH TAB (MODIFIED) ==================
+// ================== SWITCH TAB ==================
 function switchTab(type) {
   currentType = type;
 
-  // Update UI Tabs
   document
     .querySelectorAll(".tab-btn")
     .forEach((btn) => btn.classList.remove("active"));
   document.getElementById(`tab-${type}`).classList.add("active");
 
-  // Show/Hide Timer Settings & Original Price Field
   const timerSettings = document.getElementById("flashSaleTimerSettings");
   const originalPriceField = document.getElementById("field-originalPrice");
 
   if (type === "flashsale") {
-    timerSettings.classList.remove("hidden"); // TAMPILKAN TIMER SETTINGS
+    timerSettings.classList.remove("hidden");
     originalPriceField.classList.remove("hidden");
     document.getElementById("originalPrice").required = true;
-    loadFlashSaleSettings(); // Load waktu saat tab flash sale dibuka
+    loadFlashSaleSettings();
   } else {
-    timerSettings.classList.add("hidden"); // SEMBUNYIKAN TIMER SETTINGS
+    timerSettings.classList.add("hidden");
     originalPriceField.classList.add("hidden");
     document.getElementById("originalPrice").required = false;
   }
 
-  // Update Titles
   const titles = {
     products: { form: "Tambah Produk Utama", list: "Daftar Produk Utama" },
     flashsale: { form: "Tambah Flash Sale", list: "Daftar Flash Sale" },
@@ -91,7 +88,7 @@ function switchTab(type) {
   loadProducts();
 }
 
-// ================== FLASH SALE SETTINGS LOGIC ==================
+// ================== FLASH SALE SETTINGS ==================
 async function loadFlashSaleSettings() {
   try {
     const res = await fetch("/api/flashsale/settings");
@@ -102,14 +99,11 @@ async function loadFlashSaleSettings() {
 
     if (settings.endDate) {
       const dateObj = new Date(settings.endDate);
-      // Format to datetime-local input (YYYY-MM-DDTHH:MM)
-      // We adjust for timezone offset so the input shows local time correctly
       const localDate = new Date(
         dateObj.getTime() - dateObj.getTimezoneOffset() * 60000,
       )
         .toISOString()
         .slice(0, 16);
-
       inputEl.value = localDate;
       infoEl.textContent = `Jadwal saat ini: ${dateObj.toLocaleString("id-ID")}`;
     } else {
@@ -127,10 +121,7 @@ async function saveFlashSaleSettings() {
     alert("Pilih tanggal dan waktu terlebih dahulu!");
     return;
   }
-
-  // Convert input to ISO string
   const isoDate = new Date(inputVal).toISOString();
-
   try {
     const res = await fetch("/api/flashsale/settings", {
       method: "POST",
@@ -140,7 +131,7 @@ async function saveFlashSaleSettings() {
     const data = await res.json();
     if (data.success) {
       alert("Jadwal flash sale berhasil disimpan!");
-      loadFlashSaleSettings(); // Refresh info text
+      loadFlashSaleSettings();
     } else {
       alert("Gagal menyimpan jadwal.");
     }
@@ -256,6 +247,16 @@ async function editProduct(id) {
         document.getElementById("originalPrice").value = product.originalPrice;
       }
 
+      // Tampilkan preview gambar saat edit
+      const previewEl = document.getElementById("imagePreview");
+      const previewImg = document.getElementById("previewImg");
+      if (product.images && product.images[0]) {
+        previewImg.src = product.images[0];
+        previewEl.classList.remove("hidden");
+      } else {
+        previewEl.classList.add("hidden");
+      }
+
       document.getElementById("formTitle").textContent =
         "Edit Produk: " + product.name;
       window.scrollTo(0, 0);
@@ -272,9 +273,7 @@ async function deleteProduct(id) {
         method: "DELETE",
       });
       const data = await res.json();
-      if (data.success) {
-        loadProducts();
-      }
+      if (data.success) loadProducts();
     } catch (err) {
       alert("Gagal menghapus");
     }
@@ -284,6 +283,7 @@ async function deleteProduct(id) {
 function resetForm() {
   document.getElementById("productForm").reset();
   document.getElementById("productId").value = "";
+  document.getElementById("imagePreview").classList.add("hidden"); // Sembunyikan preview saat reset
   const titles = {
     products: "Tambah Produk Utama",
     flashsale: "Tambah Flash Sale",
@@ -296,7 +296,7 @@ function formatPrice(price) {
   return "Rp " + price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-// ================== FITUR UPLOAD GAMBAR (BARU) ==================
+// ================== FITUR UPLOAD GAMBAR (DENGAN KOMPRESI) ==================
 async function handleImageUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -306,53 +306,79 @@ async function handleImageUpload(event) {
   const previewImg = document.getElementById("previewImg");
   const inputUrl = document.getElementById("image");
 
-  statusEl.textContent = "Mengupload gambar...";
+  statusEl.textContent = "Memproses gambar...";
   statusEl.className = "text-xs text-yellow-500 mt-1";
 
-  // Validasi ukuran (maks 5MB untuk aman)
-  if (file.size > 5 * 1024 * 1024) {
-    statusEl.textContent = "File terlalu besar (Maks 5MB)";
+  if (!file.type.startsWith("image/")) {
+    statusEl.textContent = "Hanya file gambar yang diizinkan!";
     statusEl.className = "text-xs text-red-500 mt-1";
     return;
   }
 
-  // Baca file sebagai Base64
-  const reader = new FileReader();
-  reader.readAsDataURL(file);
+  try {
+    // PANGGIL FUNGSI KOMPRESI
+    // Max lebar 800px, kualitas 80% (0.8)
+    const compressedBase64 = await compressImage(file, 800, 0.8);
 
-  reader.onload = async function () {
-    try {
-      // Kirim base64 ke backend kita
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: reader.result }),
-      });
+    statusEl.textContent = "Mengupload...";
 
-      const data = await res.json();
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: compressedBase64 }),
+    });
 
-      if (data.success) {
-        // Sukses! Isi input URL dengan link dari ImgBB
-        inputUrl.value = data.url;
-        statusEl.textContent = "Upload berhasil!";
-        statusEl.className = "text-xs text-green-500 mt-1";
+    const data = await res.json();
 
-        // Tampilkan preview
-        previewImg.src = data.url;
-        previewEl.classList.remove("hidden");
-      } else {
-        throw new Error(data.message || "Gagal upload ke server");
-      }
-    } catch (err) {
-      statusEl.textContent = "Error: " + err.message;
-      statusEl.className = "text-xs text-red-500 mt-1";
+    if (data.success) {
+      inputUrl.value = data.url;
+      statusEl.textContent = "Upload berhasil!";
+      statusEl.className = "text-xs text-green-500 mt-1";
+
+      previewImg.src = data.url;
+      previewEl.classList.remove("hidden");
+    } else {
+      throw new Error(data.message || "Gagal upload ke server");
     }
-  };
-
-  reader.onerror = function () {
-    statusEl.textContent = "Gagal membaca file";
+  } catch (err) {
+    statusEl.textContent = "Error: " + err.message;
     statusEl.className = "text-xs text-red-500 mt-1";
-  };
+  }
 }
 
-// ... kode admin.js lainnya tetap sama ...
+// FUNGSI HELPER KOMPRESI (CANVAS)
+function compressImage(file, maxWidth, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function (event) {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = function () {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl);
+      };
+      img.onerror = function (err) {
+        reject(err);
+      };
+    };
+    reader.onerror = function (err) {
+      reject(err);
+    };
+  });
+}

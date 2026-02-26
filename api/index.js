@@ -3,12 +3,13 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import { Redis } from "@upstash/redis";
-import FormData from "form-data"; // TAMBAHKAN INI
-import fetch from "node-fetch"; // TAMBAHKAN INI (untuk compatibility di Vercel)
+import FormData from "form-data";
+import fetch from "node-fetch";
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+// PERBAIKAN ERROR 413: Tambahkan limit '50mb'
+app.use(bodyParser.json({ limit: "50mb" }));
 
 // ==================== SETUP REDIS OTOMATIS ====================
 function getRedisConfig() {
@@ -54,7 +55,7 @@ const writeData = async (key, data) => {
 
 // ==================== ROUTES ====================
 
-// 1. Login Admin
+// 1. Login Admin (Logika ada di sini, tidak perlu file terpisah)
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
   if (username === "dmkstore" && password === "dmkstore") {
@@ -65,10 +66,10 @@ app.post("/api/login", (req, res) => {
     .json({ success: false, message: "Username atau password salah" });
 });
 
-// ==================== FITUR UPLOAD GAMBAR (BARU) ====================
+// ==================== FITUR UPLOAD GAMBAR ====================
 app.post("/api/upload", async (req, res) => {
   try {
-    const { image } = req.body; // Menerima base64 string dari frontend
+    const { image } = req.body;
 
     if (!image) {
       return res
@@ -76,38 +77,36 @@ app.post("/api/upload", async (req, res) => {
         .json({ success: false, message: "Gambar tidak ditemukan" });
     }
 
-    const apiKey = process.env.IMGBB_API_KEY; // Ambil key dari Environment Variable
+    const apiKey = process.env.IMGBB_API_KEY;
 
     if (!apiKey) {
-      return res
-        .status(500)
-        .json({ success: false, message: "Server: API Key ImgBB belum diset" });
+      // Jika belum set API Key di Vercel, kembalikan error jelas
+      return res.status(500).json({
+        success: false,
+        message:
+          "Server Error: IMGBB_API_KEY belum diset di Vercel Environment Variables.",
+      });
     }
 
-    // Persiapkan form data untuk ImgBB
     const form = new FormData();
-    // Hapus prefix "data:image/jpeg;base64," jika ada, karena ImgBB hanya butuh kode base64 murni
     const base64Data = image.split(";base64,").pop();
     form.append("image", base64Data);
 
-    // Kirim ke ImgBB
     const response = await fetch(
       `https://api.imgbb.com/1/upload?key=${apiKey}`,
       {
         method: "POST",
         body: form,
-        headers: form.getHeaders(), // Penting untuk boundary
+        headers: form.getHeaders(),
       },
     );
 
     const result = await response.json();
 
     if (result.success) {
-      // Kembalikan URL ke frontend
       res.json({
         success: true,
         url: result.data.url,
-        thumb: result.data.thumb.url,
       });
     } else {
       throw new Error(result.error.message || "Gagal upload ke ImgBB");
@@ -231,7 +230,6 @@ app.delete("/api/:type/:id", async (req, res) => {
 app.post("/api/checkout", async (req, res) => {
   try {
     const { items } = req.body;
-    let updated = false;
     for (const item of items) {
       const types = ["products", "flashsale", "newrelease"];
       for (const type of types) {
@@ -240,7 +238,6 @@ app.post("/api/checkout", async (req, res) => {
         if (idx !== -1) {
           data[idx].stock = Math.max(0, (data[idx].stock || 0) - item.quantity);
           await writeData(type, data);
-          updated = true;
           break;
         }
       }
