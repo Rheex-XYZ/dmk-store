@@ -8,7 +8,7 @@ import fetch from "node-fetch";
 
 const app = express();
 app.use(cors());
-// Limit ditingkatkan untuk handle upload gambar
+// PERBAIKAN ERROR 413: Tambahkan limit '50mb'
 app.use(bodyParser.json({ limit: "50mb" }));
 
 // ==================== SETUP REDIS OTOMATIS ====================
@@ -55,7 +55,7 @@ const writeData = async (key, data) => {
 
 // ==================== ROUTES ====================
 
-// 1. Login Admin
+// 1. Login Admin (Logika ada di sini, tidak perlu file terpisah)
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
   if (username === "dmkstore" && password === "dmkstore") {
@@ -70,17 +70,21 @@ app.post("/api/login", (req, res) => {
 app.post("/api/upload", async (req, res) => {
   try {
     const { image } = req.body;
-    if (!image)
+
+    if (!image) {
       return res
         .status(400)
         .json({ success: false, message: "Gambar tidak ditemukan" });
+    }
 
     const apiKey = process.env.IMGBB_API_KEY;
-    if (!apiKey)
+
+    if (!apiKey) {
       return res.status(500).json({
         success: false,
         message: "Server Error: IMGBB_API_KEY belum diset.",
       });
+    }
 
     const form = new FormData();
     const base64Data = image.split(";base64,").pop();
@@ -98,9 +102,15 @@ app.post("/api/upload", async (req, res) => {
     const result = await response.json();
 
     if (result.success) {
-      // Ambil direct URL ke file gambar
+      // PERBAIKAN PENTING DI SINI:
+      // Kita ambil 'image.url' (Direct Link ke file .jpg), BUKAN 'url' (Link halaman web).
+      // Direct link biasanya formatnya: https://i.ibb.co/xxxxx/namafile.jpg
       const directUrl = result.data.image.url;
-      res.json({ success: true, url: directUrl });
+
+      res.json({
+        success: true,
+        url: directUrl, // Kirim direct URL ke frontend
+      });
     } else {
       throw new Error(result.error.message || "Gagal upload ke ImgBB");
     }
@@ -111,44 +121,8 @@ app.post("/api/upload", async (req, res) => {
       .json({ success: false, message: "Upload gagal: " + err.message });
   }
 });
-
-// ==================== DYNAMIC CATEGORIES ====================
-// Helper internal untuk update kategori
-const updateCategoryList = async (categoryName) => {
-  if (!categoryName) return;
-  let categories = await readData("categories");
-  if (!categories) categories = [];
-
-  const lowerCat = categoryName.toLowerCase();
-  if (!categories.includes(lowerCat)) {
-    categories.push(lowerCat);
-    await writeData("categories", categories);
-  }
-};
-
-// Get Kategori
-app.get("/api/categories", async (req, res) => {
-  try {
-    let categories = await readData("categories");
-    // Default jika kosong
-    if (!categories || categories.length === 0) {
-      categories = [
-        "kaos",
-        "hoodie",
-        "celana",
-        "jeans",
-        "kemeja",
-        "jaket",
-        "rok",
-        "dress",
-      ];
-      await writeData("categories", categories);
-    }
-    res.json(categories);
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Gagal ambil kategori" });
-  }
-});
+// ==================================================================
+// ==================================================================
 
 // 2. Get Semua Produk (Dinamis)
 app.get("/api/:type", async (req, res) => {
@@ -197,10 +171,6 @@ app.post("/api/:type", async (req, res) => {
 
     products.push(newProduct);
     await writeData(type, products);
-
-    // Simpan kategori baru jika ada
-    if (req.body.category) await updateCategoryList(req.body.category);
-
     res.json({ success: true, product: newProduct });
   } catch (err) {
     res
@@ -234,10 +204,6 @@ app.put("/api/:type/:id", async (req, res) => {
     }
 
     await writeData(type, products);
-
-    // Simpan kategori baru jika ada
-    if (req.body.category) await updateCategoryList(req.body.category);
-
     res.json({ success: true, product: products[index] });
   } catch (err) {
     res

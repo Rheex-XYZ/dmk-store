@@ -54,7 +54,7 @@
       </div>
     </div>
 
-    <!-- ADMIN DASHBOARD -->
+    <!-- ADMIN DASHBOARD (Hidden by default) -->
     <div id="dashboard" class="hidden">
       <!-- Navbar Admin -->
       <nav
@@ -109,7 +109,7 @@
         <div
           class="lg:col-span-1 bg-gray-900 p-6 rounded-xl border border-gray-800 h-fit sticky top-20"
         >
-          <!-- Pengaturan Waktu Flash Sale -->
+          <!-- BLOK BARU: PENGATURAN WAKTU FLASH SALE -->
           <div
             id="flashSaleTimerSettings"
             class="mb-6 p-4 bg-gray-800 rounded-lg border border-dashed border-yellow-500 hidden"
@@ -147,6 +147,7 @@
               <p id="currentEndTime" class="text-xs text-gray-500 mt-2"></p>
             </div>
           </div>
+          <!-- AKHIR BLOK BARU -->
 
           <h2 class="text-lg font-bold mb-4" id="formTitle">
             Tambah Produk Baru
@@ -178,6 +179,8 @@
                   class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
                 />
               </div>
+
+              <!-- Khusus Flash Sale: Harga Asli -->
               <div id="field-originalPrice" class="hidden">
                 <label class="text-sm text-gray-400">Harga Asli (Rp)</label>
                 <input
@@ -186,6 +189,7 @@
                   class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
                 />
               </div>
+
               <div>
                 <label class="text-sm text-gray-400">Stok</label>
                 <input
@@ -197,40 +201,47 @@
               </div>
             </div>
 
-            <!-- KATEGORI DINAMIS (INPUT TEXT) -->
-            <div>
-              <label class="text-sm text-gray-400">Kategori</label>
-              <input
-                list="categoryList"
-                id="category"
-                name="category"
-                placeholder="Ketik atau pilih kategori..."
-                required
-                class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
-              />
-              <datalist id="categoryList"></datalist>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-sm text-gray-400">Kategori</label>
+                <select
+                  id="category"
+                  class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
+                >
+                  <option value="kaos">Kaos</option>
+                  <option value="hoodie">Hoodie</option>
+                  <option value="celana">Celana</option>
+                  <option value="jeans">Jeans</option>
+                  <option value="kemeja">Kemeja</option>
+                  <option value="jaket">Jaket</option>
+                  <option value="rok">Rok</option>
+                  <option value="dress">Dress</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-400">Ukuran</label>
+                <input
+                  type="text"
+                  id="size"
+                  placeholder="S - XL"
+                  class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
+                />
+              </div>
             </div>
 
-            <div>
-              <label class="text-sm text-gray-400">Ukuran</label>
-              <input
-                type="text"
-                id="size"
-                placeholder="S - XL"
-                class="w-full bg-gray-800 p-2 rounded mt-1 border border-gray-700 outline-none"
-              />
-            </div>
-
-            <!-- UPLOAD GAMBAR -->
+            <!-- BAGIAN GAMBAR DENGAN FITUR UPLOAD -->
             <div>
               <label class="text-sm text-gray-400">Gambar Produk</label>
               <div class="flex gap-2 items-center mt-1">
+                <!-- Input URL (Akan terisi otomatis saat upload berhasil) -->
                 <input
                   type="url"
                   id="image"
-                  placeholder="Link gambar otomatis muncul"
+                  placeholder="Link gambar otomatis muncul di sini"
                   class="flex-1 bg-gray-800 p-2 rounded border border-gray-700 outline-none text-sm"
                 />
+
+                <!-- Tombol Upload -->
                 <label
                   class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded cursor-pointer text-sm font-semibold flex items-center gap-2 transition whitespace-nowrap"
                 >
@@ -256,7 +267,9 @@
                   />
                 </label>
               </div>
+              <!-- Status Upload -->
               <p id="uploadStatus" class="text-xs text-gray-500 mt-1 h-4"></p>
+              <!-- Preview Gambar -->
               <div id="imagePreview" class="mt-2 hidden">
                 <img
                   src=""
@@ -266,6 +279,7 @@
                 />
               </div>
             </div>
+            <!-- AKHIR BAGIAN GAMBAR -->
 
             <div>
               <label class="text-sm text-gray-400">Deskripsi</label>
@@ -297,10 +311,9 @@
         <!-- Daftar Produk -->
         <div class="lg:col-span-2">
           <h2 class="text-lg font-bold mb-4" id="listTitle">Daftar Produk</h2>
-          <div
-            id="productList"
-            class="grid grid-cols-1 md:grid-cols-2 gap-4"
-          ></div>
+          <div id="productList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Produk akan di-render di sini -->
+          </div>
         </div>
       </div>
     </div>
