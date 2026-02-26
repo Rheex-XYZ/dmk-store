@@ -1,21 +1,21 @@
-// HAPUS const newReleaseProducts = [...] (hardcode)
+let newReleaseProducts = [];
+let cart = [];
 
-let newReleaseProducts = []; // Buat variabel kosong
+// Variabel untuk checkout
+let currentCheckoutItems = [];
+let isCheckoutFromCart = false;
 
-// Ganti fungsi DOMContentLoaded menjadi:
 document.addEventListener("DOMContentLoaded", function () {
   loadCart();
-  // Panggil fungsi fetch data
   fetchNewReleaseProducts();
 });
 
-// Tambahkan fungsi baru ini
 async function fetchNewReleaseProducts() {
   try {
     const res = await fetch("/api/newrelease");
     if (res.ok) {
       newReleaseProducts = await res.json();
-      renderNewReleaseProducts("all"); // Render ulang setelah data datang
+      renderNewReleaseProducts("all");
     } else {
       console.error("Gagal memuat new release");
     }
@@ -72,7 +72,7 @@ function updateCartUI() {
   const empty = document.getElementById("cartEmpty");
   const total = document.getElementById("cartTotal");
 
-  if (!badge) return; // Safety check
+  if (!badge) return;
 
   badge.textContent = cart.length;
   count.textContent = cart.length;
@@ -136,7 +136,10 @@ function toggleCart() {
 }
 
 // ==================== FUNGSI MODAL CHECKOUT ====================
-function openCheckoutModal() {
+function openCheckoutModal(items, fromCart = false) {
+  currentCheckoutItems = items;
+  isCheckoutFromCart = fromCart;
+
   const summaryContainer = document.getElementById("modalOrderSummary");
   const totalPriceEl = document.getElementById("modalTotalPrice");
   const modal = document.getElementById("checkoutModal");
@@ -144,7 +147,7 @@ function openCheckoutModal() {
 
   let summaryHTML = "";
   let total = 0;
-  cart.forEach((item) => {
+  currentCheckoutItems.forEach((item) => {
     summaryHTML += `<div class="summary-item"><span>${item.name}</span><span>${formatPrice(item.price)}</span></div>`;
     total += item.price;
   });
@@ -163,9 +166,11 @@ function closeCheckoutModal() {
   modal.classList.remove("active");
   overlay.classList.remove("active");
   document.body.style.overflow = "";
+  currentCheckoutItems = [];
+  isCheckoutFromCart = false;
 }
 
-function confirmCheckout() {
+async function confirmCheckout() {
   const selectedPayment = document.querySelector(
     'input[name="paymentMethod"]:checked',
   );
@@ -189,27 +194,58 @@ function confirmCheckout() {
       atasNama: "Sri Nofrianti",
     };
 
-  let message = `Halo Kak, saya mau order dari DMK Store:\n\n`;
-  cart.forEach((item, index) => {
-    message += `${index + 1}. ${item.name} - ${formatPrice(item.price)}\n`;
-    message += `   Link Foto: ${item.image}\n`; // LINK GAMBAR DITAMBAHKAN
-  });
+  // Update stok di server
+  try {
+    const checkoutData = {
+      items: currentCheckoutItems.map((item) => ({
+        id: item.id,
+        quantity: 1,
+      })),
+    };
 
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
-  message += `\n*Total: ${formatPrice(total)}*\n\n`;
-  message += `*Metode Pembayaran:*\n${bankInfo.name}\nNo Rek: ${bankInfo.rekening}\na.n ${bankInfo.atasNama}\n\n`;
-  message += `Mohon konfirmasi ketersediaan. Terima kasih!`;
+    const response = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(checkoutData),
+    });
+    const result = await response.json();
 
-  window.open(
-    `https://wa.me/628116638877?text=${encodeURIComponent(message)}`,
-    "_blank",
-  );
-  closeCheckoutModal();
+    if (result.success) {
+      let message = `Halo Kak, saya mau order dari DMK Store:\n\n`;
+      currentCheckoutItems.forEach((item, index) => {
+        message += `${index + 1}. ${item.name} - ${formatPrice(item.price)}\n`;
+        message += `   Link Foto: ${item.image}\n`;
+      });
 
-  // Kosongkan keranjang setelah checkout
-  cart = [];
-  saveCart();
-  toggleCart(); // Tutup sidebar keranjang
+      const total = currentCheckoutItems.reduce(
+        (sum, item) => sum + item.price,
+        0,
+      );
+      message += `\n*Total: ${formatPrice(total)}*\n\n`;
+      message += `*Metode Pembayaran:*\n${bankInfo.name}\nNo Rek: ${bankInfo.rekening}\na.n ${bankInfo.atasNama}\n\n`;
+      message += `Mohon konfirmasi ketersediaan. Terima kasih!`;
+
+      window.open(
+        `https://wa.me/628116638877?text=${encodeURIComponent(message)}`,
+        "_blank",
+      );
+
+      if (isCheckoutFromCart) {
+        cart = [];
+        saveCart();
+        toggleCart();
+      }
+
+      closeCheckoutModal();
+      fetchNewReleaseProducts(); // Refresh produk
+      showToast("Checkout berhasil!");
+    } else {
+      showToast("Gagal update stok.");
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("Error saat checkout.");
+  }
 }
 
 function checkoutAll() {
@@ -217,7 +253,7 @@ function checkoutAll() {
     showToast("Keranjang masih kosong");
     return;
   }
-  openCheckoutModal();
+  openCheckoutModal(cart, true);
 }
 
 // ==================== FUNGSI BELI & NAVIGASI ====================
@@ -225,22 +261,15 @@ function buyNow(productId) {
   const product = newReleaseProducts.find((p) => p.id === productId);
   if (!product || product.stock <= 0) return;
 
-  // Cek apakah sudah ada di keranjang
-  const isInCart = cart.some((item) => item.id === productId);
+  // Buat item sementara TANPA menambah ke cart
+  const itemToBuy = {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    image: product.images[0],
+  };
 
-  // Jika belum, tambahkan
-  if (!isInCart) {
-    cart.push({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images[0],
-    });
-    saveCart();
-  }
-
-  // Langsung buka modal checkout
-  openCheckoutModal();
+  openCheckoutModal([itemToBuy], false);
 }
 
 function toggleMenu() {

@@ -1,13 +1,16 @@
 // ==================== VARIABEL GLOBAL ====================
-// Data produk sekarang diambil dari server, bukan hardcode
 let products = [];
 let cart = [];
 let currentCategory = "all";
 
+// Variabel untuk menampung item yang akan di-checkout (Beli Langsung atau dari Keranjang)
+let currentCheckoutItems = [];
+let isCheckoutFromCart = false;
+
 // ==================== INISIALISASI ====================
 document.addEventListener("DOMContentLoaded", function () {
   loadCart();
-  fetchProducts(); // Ambil data produk dari server saat halaman dimuat
+  fetchProducts();
   setupScrollEffects();
   setupNavbar();
 });
@@ -18,8 +21,8 @@ async function fetchProducts() {
     const response = await fetch("/api/products");
     if (!response.ok) throw new Error("Gagal memuat data");
 
-    products = await response.json(); // Update variabel global products
-    renderProducts(currentCategory); // Render ulang tampilan dengan data terbaru
+    products = await response.json();
+    renderProducts(currentCategory);
   } catch (error) {
     console.error("Error:", error);
     const grid = document.getElementById("productsGrid");
@@ -44,11 +47,9 @@ function saveCart() {
 }
 
 function addToCart(productId) {
-  // Cari produk dari data yang sudah di-fetch dari server
   const product = products.find((p) => p.id === productId);
   if (!product) return;
 
-  // Cek Stok
   if (product.stock <= 0) {
     showToast("Maaf, stok produk ini habis.");
     return;
@@ -73,7 +74,6 @@ function addToCart(productId) {
   saveCart();
   showToast("Produk ditambahkan ke keranjang");
 
-  // Update button state
   const btn = document.querySelector(`[data-product-id="${productId}"]`);
   if (btn) {
     btn.classList.add("added");
@@ -91,7 +91,6 @@ function removeFromCart(productId) {
   saveCart();
   renderCartItems();
 
-  // Reset button state
   const btn = document.querySelector(`[data-product-id="${productId}"]`);
   if (btn) {
     btn.classList.remove("added");
@@ -138,7 +137,6 @@ function renderCartItems() {
 
   if (!container) return;
 
-  // Clear existing items except empty state
   const existingItems = container.querySelectorAll(".cart-item");
   existingItems.forEach((item) => item.remove());
 
@@ -192,7 +190,6 @@ function renderProducts(category) {
 
   if (!grid) return;
 
-  // Update header
   const categoryNames = {
     all: "Semua Produk",
     kaos: "Koleksi Kaos",
@@ -234,7 +231,6 @@ function renderProducts(category) {
     const isInCart = cart.some((item) => item.id === product.id);
     const isOutOfStock = product.stock <= 0;
 
-    // Handle jika images tidak ada atau kosong
     const productImages =
       product.images && product.images.length > 0
         ? product.images
@@ -307,14 +303,12 @@ function renderProducts(category) {
     grid.appendChild(card);
   });
 
-  // Trigger reveal animation
   setTimeout(() => {
     document.querySelectorAll(".product-card.reveal").forEach((el) => {
       el.classList.add("active");
     });
   }, 100);
 
-  // Update menu active state
   document.querySelectorAll(".menu-item").forEach((item) => {
     item.classList.remove("active");
     if (item.dataset.category === category) {
@@ -322,7 +316,6 @@ function renderProducts(category) {
     }
   });
 
-  // Close mobile menu
   closeMenu();
 }
 
@@ -377,27 +370,19 @@ function buyNow(productId) {
     return;
   }
 
-  const isInCart = cart.some((item) => item.id === productId);
+  // Buat item sementara tanpa menambahkan ke cart
+  const itemToBuy = {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    image:
+      product.images && product.images[0]
+        ? product.images[0]
+        : "https://via.placeholder.com/400",
+  };
 
-  if (!isInCart) {
-    cart.push({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image:
-        product.images && product.images[0]
-          ? product.images[0]
-          : "https://via.placeholder.com/400",
-    });
-    saveCart();
-    const btn = document.querySelector(`[data-product-id="${productId}"]`);
-    if (btn) {
-      btn.classList.add("added");
-      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Ditambahkan`;
-    }
-  }
-
-  openCheckoutModal();
+  // Buka modal dengan item tersebut, set flag fromCart = false
+  openCheckoutModal([itemToBuy], false);
 }
 
 function checkoutAll() {
@@ -405,12 +390,16 @@ function checkoutAll() {
     showToast("Keranjang masih kosong");
     return;
   }
-  openCheckoutModal();
+  // Buka modal dengan isi cart, set flag fromCart = true
+  openCheckoutModal(cart, true);
 }
 
-// ==================== FUNGSI MODAL CHECKOUT (DENGAN UPDATE STOK) ====================
+// ==================== FUNGSI MODAL CHECKOUT (DENGAN PARAMETER) ====================
 
-function openCheckoutModal() {
+function openCheckoutModal(items, fromCart = false) {
+  currentCheckoutItems = items;
+  isCheckoutFromCart = fromCart;
+
   const summaryContainer = document.getElementById("modalOrderSummary");
   const totalPriceEl = document.getElementById("modalTotalPrice");
   const modal = document.getElementById("checkoutModal");
@@ -421,7 +410,7 @@ function openCheckoutModal() {
   let summaryHTML = "";
   let total = 0;
 
-  cart.forEach((item) => {
+  currentCheckoutItems.forEach((item) => {
     summaryHTML += `
       <div class="summary-item">
         <span>${item.name}</span>
@@ -446,6 +435,10 @@ function closeCheckoutModal() {
   if (modal) modal.classList.remove("active");
   if (overlay) overlay.classList.remove("active");
   document.body.style.overflow = "";
+
+  // Reset variabel sementara
+  currentCheckoutItems = [];
+  isCheckoutFromCart = false;
 }
 
 async function confirmCheckout() {
@@ -475,12 +468,12 @@ async function confirmCheckout() {
     };
   }
 
-  // === BAGIAN BARU: KIRIM KE SERVER UNTUK KURANGI STOK ===
   try {
+    // Gunakan currentCheckoutItems untuk update stok di server
     const checkoutData = {
-      items: cart.map((item) => ({
+      items: currentCheckoutItems.map((item) => ({
         id: item.id,
-        quantity: 1, // Asumsi beli 1 per item
+        quantity: 1,
       })),
     };
 
@@ -493,15 +486,16 @@ async function confirmCheckout() {
     const result = await response.json();
 
     if (result.success) {
-      // Jika sukses update stok di server, lanjut buka WhatsApp
-
-      // Susun pesan WA
+      // Susun pesan WA menggunakan currentCheckoutItems
       let message = `Halo Kak, saya mau order dari DMK Store:\n\n`;
-      cart.forEach((item, index) => {
+      currentCheckoutItems.forEach((item, index) => {
         message += `${index + 1}. ${item.name} - ${formatPrice(item.price)}\n`;
         message += `   Link Foto: ${item.image}\n`;
       });
-      const total = cart.reduce((sum, item) => sum + item.price, 0);
+      const total = currentCheckoutItems.reduce(
+        (sum, item) => sum + item.price,
+        0,
+      );
       message += `\n*Total: ${formatPrice(total)}*\n\n`;
       message += `*Metode Pembayaran:*\n${bankInfo.name}\nNo Rek: ${bankInfo.rekening}\na.n ${bankInfo.atasNama}\n\n`;
       message += `Mohon konfirmasi ketersediaan. Terima kasih!`;
@@ -511,13 +505,14 @@ async function confirmCheckout() {
         "_blank",
       );
 
-      // Bersihkan keranjang lokal
-      cart = [];
-      saveCart();
-      closeCheckoutModal();
-      toggleCart();
+      // LOGIWA PENTING: Hanya kosongkan cart jika asalnya dari keranjang
+      if (isCheckoutFromCart) {
+        cart = [];
+        saveCart();
+        toggleCart();
+      }
 
-      // Ambil data produk terbaru untuk update tampilan stok di halaman
+      closeCheckoutModal();
       fetchProducts();
 
       showToast("Checkout berhasil!");
